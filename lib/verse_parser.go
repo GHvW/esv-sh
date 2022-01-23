@@ -1,5 +1,7 @@
 package lib
 
+import "unicode"
+
 // completely overkill, but so so fun
 
 type ParseSuccess struct {
@@ -120,6 +122,10 @@ type Satisfy struct {
 	predicate func(rune) bool
 }
 
+func Satisfies(predicate func(rune) bool) *Combinator {
+	return &Combinator{&Satisfy{predicate}}
+}
+
 func (sat *Satisfy) Parse(s []rune) (*ParseSuccess, bool) {
 	return TakeItem().FlatMap(func(it interface{}) Parser {
 		if sat.predicate(it.(rune)) {
@@ -129,28 +135,27 @@ func (sat *Satisfy) Parse(s []rune) (*ParseSuccess, bool) {
 	}).Parse(s)
 }
 
-// // Alpha is a parser that matches any single character in the range a-z
-// type Alpha struct {
-// 	component Combinator
-// }
+// Alpha is a parser that matches any single character in the range a-z
+type Alpha struct{}
 
-// func (a *Alpha) Parse(s rune) (*ParseSuccess, bool) {
-// 	return &Satisfy{func(rune) bool {
-// 		return s >= 'a' && s <= 'z'
-// 	}}, true
+func IsAlpha() *Combinator {
+	return &Combinator{Alpha{}}
+}
 
-// }
+func (a Alpha) Parse(s []rune) (*ParseSuccess, bool) {
+	return Satisfies(unicode.IsLetter).Parse(s)
+}
 
-// // Digit matches a string that is a digit character
-// type Digit struct {
-// 	component Combinator
-// }
+// Digit matches a string that is a digit character
+type Digit struct{}
 
-// func (d *Digit) Parse(s rune) (*ParseSuccess, bool) {
-// 	return &Satisfy{func(rune) bool {
-// 		return s >= '0' && s <= '9'
-// 	}}, true
-// }
+func IsDigit() *Combinator {
+	return &Combinator{Digit{}}
+}
+
+func (d Digit) Parse(s []rune) (*ParseSuccess, bool) {
+	return Satisfies(unicode.IsDigit).Parse(s)
+}
 
 // type Many struct {
 // 	parser    Parser
