@@ -65,20 +65,22 @@ func (m *Map) Parse(s []rune) (*ParseSuccess, bool) {
 	return &ParseSuccess{m.fn(result.Data), result.Rest}, true
 }
 
-// // FlatMap is a Parser that applies a function that returns a Parser to the result of a Parser
-// type FlatMap struct {
-// 	// a -> Parser[b]
-// 	fn        func(interface{}) Parser
-// 	component *Combinator
-// }
+// FlatMap is a Parser that applies a function that returns a Parser to the result of a Parser
+type FlatMap struct {
+	// a -> Parser[b]
+	fn func(interface{}) Parser
+	// component *Combinator
+	parser Parser
+}
 
-// func (fm *FlatMap) Parse(s []rune) (interface{}, bool) {
-// 	item, ok := fm.component.Parse(s)
-// 	if ok {
-// 		return fm.fn(item).Parse(s)
-// 	}
-// 	return nil, false
-// }
+func (fm *FlatMap) Parse(s []rune) (*ParseSuccess, bool) {
+	item, ok := fm.parser.Parse(s)
+	if !ok {
+
+		return nil, false
+	}
+	return fm.fn(item.Data).Parse(item.Rest)
+}
 
 // type Combinator struct {
 // 	parser Parser

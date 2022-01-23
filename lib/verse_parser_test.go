@@ -70,4 +70,24 @@ func TestGivenAVerse(t *testing.T) {
 			t.Errorf("Expected mapper to return ParseSuccess with data %v, but got %v", "JOHN 3:16", s.Data)
 		}
 	})
+
+	t.Run("AndAFlatMappedParser_WhenParsed", func(t *testing.T) {
+		flatmapper := &FlatMap{func(rs interface{}) Parser {
+			return &Succeed{rs}
+		}, &Item{}}
+
+		s, ok := flatmapper.Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got nil", "J", "ohn 3:16")
+		}
+
+		if string(s.Data.(rune)) != "J" {
+			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got %v, %v", "J", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+
+		if string(s.Rest) != "ohn 3:16" {
+			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got %v, %v", "J", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+	})
 }
