@@ -58,7 +58,7 @@ func TestGivenAVerse(t *testing.T) {
 
 			s, _, _ := transform.String(upper, string(rs.([]rune)))
 			return s
-		}, &Succeed{testStr}}
+		}, Success(testStr)}
 
 		s, ok := mapper.Parse(testStr)
 
@@ -71,10 +71,28 @@ func TestGivenAVerse(t *testing.T) {
 		}
 	})
 
+	t.Run("WhenParsedWithCombinatorIntegration", func(t *testing.T) {
+		s, ok := TakeItem().Map(func(r interface{}) interface{} {
+			return unicode.ToLower(r.(rune))
+		}).Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected to be able to parse %s and map to (data: %v, rest: %s) but nothing was returned", string(testStr), "j", "ohn 3:16")
+		}
+
+		if s.Data != 'j' {
+			t.Errorf("Expected to be able to parse %s and map to (data: %v, rest: %s) but data was %s and rest was %s", string(testStr), "j", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+
+		if string(s.Rest) != "ohn 3:16" {
+			t.Errorf("Expected to be able to parse %s and map to (data: %v, rest: %s) but data was %s and rest was %s", string(testStr), "j", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+	})
+
 	t.Run("AndAFlatMappedParser_WhenParsed", func(t *testing.T) {
 		flatmapper := &FlatMap{func(rs interface{}) Parser {
-			return &Succeed{rs}
-		}, &Item{}}
+			return Success(rs)
+		}, TakeItem()}
 
 		s, ok := flatmapper.Parse(testStr)
 
