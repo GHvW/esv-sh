@@ -83,6 +83,19 @@ func (fm *FlatMap) Parse(s []rune) (*ParseSuccess, bool) {
 	return fm.fn(item.Data).Parse(item.Rest)
 }
 
+type Or struct {
+	first  Parser
+	second Parser
+}
+
+func (or *Or) Parse(s []rune) (*ParseSuccess, bool) {
+	item, ok := or.first.Parse(s)
+	if ok {
+		return item, true
+	}
+	return or.second.Parse(s)
+}
+
 type Combinator struct {
 	parser Parser
 }
@@ -95,26 +108,26 @@ func (pc *Combinator) FlatMap(fn func(interface{}) Parser) Parser {
 	return &FlatMap{fn, pc.parser}
 }
 
-// func (pc *Combinator) Or(other Parser) Parser {
-// 	return &Or{pc.parser, other}
-// }
+func (pc *Combinator) Or(other Parser) Parser {
+	return &Or{pc.parser, other}
+}
 
 func (pc *Combinator) Parse(s []rune) (*ParseSuccess, bool) {
 	return pc.parser.Parse(s)
 }
 
-// type Satisfy struct {
-// 	predicate func(rune) bool
-// 	component Combinator
-// }
+type Satisfy struct {
+	predicate func(rune) bool
+}
 
-// func (sat *Satisfy) Parse(a rune) (*ParseSuccess, bool) {
-// 	if sat.predicate(a) {
-// 		return &Succeed{a}, true
-// 	}
-
-// 	return &Zero{}, false
-// }
+func (sat *Satisfy) Parse(s []rune) (*ParseSuccess, bool) {
+	return TakeItem().FlatMap(func(it interface{}) Parser {
+		if sat.predicate(it.(rune)) {
+			return Success(it)
+		}
+		return Fail()
+	}).Parse(s)
+}
 
 // // Alpha is a parser that matches any single character in the range a-z
 // type Alpha struct {
@@ -137,20 +150,6 @@ func (pc *Combinator) Parse(s []rune) (*ParseSuccess, bool) {
 // 	return &Satisfy{func(rune) bool {
 // 		return s >= '0' && s <= '9'
 // 	}}, true
-// }
-
-// type Or struct {
-// 	first     Parser
-// 	second    Parser
-// 	component Combinator
-// }
-
-// func (or *Or) Parse(s []rune) (*ParseSuccess, bool) {
-// 	item, ok := or.first.Parse(s)
-// 	if ok {
-// 		return item, true
-// 	}
-// 	return or.second.Parse(s)
 // }
 
 // type Many struct {

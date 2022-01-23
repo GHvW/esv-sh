@@ -71,10 +71,12 @@ func TestGivenAVerse(t *testing.T) {
 		}
 	})
 
-	t.Run("WhenParsedWithCombinatorIntegration", func(t *testing.T) {
+	t.Run("WhenParsedWithCombinatorMapIntegration", func(t *testing.T) {
 		s, ok := TakeItem().Map(func(r interface{}) interface{} {
 			return unicode.ToLower(r.(rune))
 		}).Parse(testStr)
+
+		// g, gok := TakeItem().Map(unicode.ToLower).Parse(testStr) // unfortunately, this doesn't work yet
 
 		if !ok {
 			t.Errorf("Expected to be able to parse %s and map to (data: %v, rest: %s) but nothing was returned", string(testStr), "j", "ohn 3:16")
@@ -89,7 +91,7 @@ func TestGivenAVerse(t *testing.T) {
 		}
 	})
 
-	t.Run("AndAFlatMappedParser_WhenParsed", func(t *testing.T) {
+	t.Run("And A FlatMapped Parser, When Parsed", func(t *testing.T) {
 		flatmapper := &FlatMap{func(rs interface{}) Parser {
 			return Success(rs)
 		}, TakeItem()}
@@ -106,6 +108,39 @@ func TestGivenAVerse(t *testing.T) {
 
 		if string(s.Rest) != "ohn 3:16" {
 			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got %v, %v", "J", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+	})
+
+	t.Run("When Parsed With Combinator FlatMap Integration", func(t *testing.T) {
+
+		s, ok := TakeItem().FlatMap(func(rs interface{}) Parser {
+			return Success(rs)
+		}).Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got nil", "J", "ohn 3:16")
+		}
+
+		if string(s.Data.(rune)) != "J" {
+			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got %v, %v", "J", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+
+		if string(s.Rest) != "ohn 3:16" {
+			t.Errorf("Expected flatmapper to return ParseSuccess with data %v and rest %v, but got %v, %v", "J", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
+		}
+	})
+
+	t.Run("When parsed with a satisfy test", func(t *testing.T) {
+		sat := &Satisfy{unicode.IsLetter}
+
+		s, ok := sat.Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected satisfy to return ParseSuccess with data %v and rest %v, but got nil", "J", "ohn 3:16")
+		}
+
+		if s.Data.(rune) != 'J' {
+			t.Errorf("Expected satisfy to return ParseSuccess with data %v and rest %v, but got %v, %v", "J", "ohn 3:16", string(s.Data.(rune)), string(s.Rest))
 		}
 	})
 }
