@@ -10,7 +10,7 @@ type ParseSuccess struct {
 // Parser is a function that takes a string and returns a value and a bool
 type Parser interface {
 	// []rune is the input string
-	Parse([]rune) (ParseSuccess, bool)
+	Parse([]rune) (*ParseSuccess, bool)
 }
 
 // func satsify(predicate func(string) bool) bool {
@@ -51,19 +51,19 @@ func (su *Succeed) Parse(s []rune) (*ParseSuccess, bool) {
 }
 
 // Map is a Parser that applies a function to the result of another Parser
-// type Map struct {
-// 	// a -> b
-// 	fn        func(interface{}) interface{}
-// 	component *Combinator
-// }
+type Map struct {
+	// a -> b
+	fn     func(interface{}) interface{}
+	parser Parser
+}
 
-// func (m *Map) Parse(s []rune) (interface{}, bool) {
-// 	item, ok := m.component.Parse(s)
-// 	if ok {
-// 		return m.fn(item), true
-// 	}
-// 	return nil, false
-// }
+func (m *Map) Parse(s []rune) (*ParseSuccess, bool) {
+	result, ok := m.parser.Parse(s)
+	if !ok {
+		return nil, false
+	}
+	return &ParseSuccess{m.fn(result.Data), result.Rest}, true
+}
 
 // // FlatMap is a Parser that applies a function that returns a Parser to the result of a Parser
 // type FlatMap struct {

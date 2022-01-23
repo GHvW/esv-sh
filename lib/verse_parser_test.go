@@ -1,6 +1,12 @@
 package lib
 
-import "testing"
+import (
+	"testing"
+	"unicode"
+
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+)
 
 func TestGivenAVerse(t *testing.T) {
 	testStr := []rune("John 3:16")
@@ -36,11 +42,32 @@ func TestGivenAVerse(t *testing.T) {
 		s, ok := success.Parse(testStr)
 
 		if !ok {
-			t.Errorf("Expected success to return ParseSuccess with data %v, but got nil", s.Data)
+			t.Errorf("Expected success to return ParseSuccess with data %v, but got nil", string(testStr))
 		}
 
 		if string(s.Data.([]rune)) != string(testStr) {
 			t.Errorf("Expected success to return ParseSuccess with data %v, but got %v", string(testStr), string(s.Data.([]rune)))
+		}
+	})
+
+	t.Run("AndAMappedParser_WhenParsed", func(t *testing.T) {
+		mapper := &Map{func(rs interface{}) interface{} {
+			upper := runes.Map(func(r rune) rune {
+				return unicode.ToUpper(r)
+			})
+
+			s, _, _ := transform.String(upper, string(rs.([]rune)))
+			return s
+		}, &Succeed{testStr}}
+
+		s, ok := mapper.Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected mapper to return ParseSuccess with data %v, but got nil", "JOHN 3:16")
+		}
+
+		if s.Data != "JOHN 3:16" {
+			t.Errorf("Expected mapper to return ParseSuccess with data %v, but got %v", "JOHN 3:16", s.Data)
 		}
 	})
 }
