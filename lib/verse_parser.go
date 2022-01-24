@@ -102,16 +102,16 @@ type Combinator struct {
 	parser Parser
 }
 
-func (pc *Combinator) Map(fn func(interface{}) interface{}) Parser {
-	return &Map{fn, pc.parser}
+func (pc *Combinator) Map(fn func(interface{}) interface{}) *Combinator {
+	return &Combinator{&Map{fn, pc.parser}}
 }
 
-func (pc *Combinator) FlatMap(fn func(interface{}) Parser) Parser {
-	return &FlatMap{fn, pc.parser}
+func (pc *Combinator) FlatMap(fn func(interface{}) Parser) *Combinator {
+	return &Combinator{&FlatMap{fn, pc.parser}}
 }
 
-func (pc *Combinator) Or(other Parser) Parser {
-	return &Or{pc.parser, other}
+func (pc *Combinator) Or(other Parser) *Combinator {
+	return &Combinator{&Or{pc.parser, other}}
 }
 
 func (pc *Combinator) Parse(s []rune) (*ParseSuccess, bool) {
@@ -157,26 +157,19 @@ func (d Digit) Parse(s []rune) (*ParseSuccess, bool) {
 	return Satisfies(unicode.IsDigit).Parse(s)
 }
 
-// type Many struct {
-// 	parser    Parser
-// 	component Combinator
-// }
+type Many struct {
+	parser *Combinator
+}
 
-// func (many *Many) Parse(s []rune) (*ParseSuccess, bool) {
-// 	// results := []interface{}{}
-// 	// next := s
-// 	// for {
-// 	// 	item, ok := many.parser.Parse(s)
-// 	// 	if ok {
-// 	// 		results = append(results, item)
-// 	// 		next = next[1:]
-// 	// 	} else {
-// 	// 		return results, true
-// 	// 	}
-// 	// }
-// 	return many.component.FlatMap(func(item rune) Combinator {
-// 		return Many{many.parser}.FlatMap(func(rest []rune) Combinator {
-// 			return append(rest, item)
-// 		})
-// 	}).Or(&Succeed{[]interface{}{}}).Parse(s)
-// }
+func Multiple(parser *Combinator) *Combinator {
+	return &Combinator{&Many{parser}}
+}
+
+func (many *Many) Parse(s []rune) (*ParseSuccess, bool) {
+	return many.parser.FlatMap(func(it interface{}) Parser {
+		return Multiple(many.parser).FlatMap(func(rest interface{}) Parser {
+			// TODO - change this later to something more appropriate
+			return Success(append([]interface{}{it}, rest.([]interface{})...))
+		})
+	}).Or(Success([]interface{}{})).Parse(s)
+}
