@@ -1,6 +1,8 @@
 package lib
 
-import "unicode"
+import (
+	"unicode"
+)
 
 // completely overkill, but so so fun
 
@@ -136,24 +138,24 @@ func (sat *Satisfy) Parse(s []rune) (*ParseSuccess, bool) {
 }
 
 // Alpha is a parser that matches any single character in the range a-z
-type Alpha struct{}
+type AlphaParser struct{}
 
-func IsAlpha() *Combinator {
-	return &Combinator{Alpha{}}
+func Alpha() *Combinator {
+	return &Combinator{AlphaParser{}}
 }
 
-func (a Alpha) Parse(s []rune) (*ParseSuccess, bool) {
+func (a AlphaParser) Parse(s []rune) (*ParseSuccess, bool) {
 	return Satisfies(unicode.IsLetter).Parse(s)
 }
 
 // Digit matches a string that is a digit character
-type Digit struct{}
+type DigitParser struct{}
 
-func IsDigit() *Combinator {
-	return &Combinator{Digit{}}
+func Digit() *Combinator {
+	return &Combinator{DigitParser{}}
 }
 
-func (d Digit) Parse(s []rune) (*ParseSuccess, bool) {
+func (d DigitParser) Parse(s []rune) (*ParseSuccess, bool) {
 	return Satisfies(unicode.IsDigit).Parse(s)
 }
 
@@ -188,5 +190,21 @@ func (many1 *Many1) Parse(s []rune) (*ParseSuccess, bool) {
 			// TODO - change this later to something more appropriate
 			return Success(append([]interface{}{it}, rest.([]interface{})...))
 		})
+	}).Parse(s)
+}
+
+type Natural struct{}
+
+func NaturalNumber() *Combinator {
+	return &Combinator{&Natural{}}
+}
+
+func (nat *Natural) Parse(s []rune) (*ParseSuccess, bool) {
+	return AtLeastOne(Digit()).Map(func(it interface{}) interface{} {
+		result := 0
+		for _, next := range it.([]interface{}) {
+			result = (10 * result) + int(next.(rune)-'0')
+		}
+		return result
 	}).Parse(s)
 }

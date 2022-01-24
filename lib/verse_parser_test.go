@@ -146,7 +146,7 @@ func TestGivenAVerse(t *testing.T) {
 
 	// TODO - find a better way to test this
 	t.Run("When parsing multiple Alphabetic characters", func(t *testing.T) {
-		many := Multiple(IsAlpha())
+		many := Multiple(Alpha())
 
 		s, ok := many.Parse(testStr)
 
@@ -167,7 +167,7 @@ func TestGivenAVerse(t *testing.T) {
 	})
 
 	t.Run("When parsing multiple Alphabetic characters", func(t *testing.T) {
-		many := AtLeastOne(IsAlpha())
+		many := AtLeastOne(Alpha())
 
 		s, ok := many.Parse(testStr)
 
@@ -188,12 +188,30 @@ func TestGivenAVerse(t *testing.T) {
 	})
 
 	t.Run("When parsing at least one Alphabetic character and the string is digits", func(t *testing.T) {
-		many := AtLeastOne(IsAlpha())
+		many := AtLeastOne(Alpha())
 
 		_, ok := many.Parse([]rune("123"))
 
 		if ok {
 			t.Errorf("Expected alphabetic parser to fail when given digits, but it didn't")
+		}
+	})
+
+	t.Run("When parsing a natural number", func(t *testing.T) {
+		many := NaturalNumber()
+
+		result, ok := many.Parse([]rune("123a"))
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(int) != 123 {
+			t.Errorf("Expected 123, but got %v", result.Data)
+		}
+
+		if string(result.Rest) != "a" {
+			t.Errorf("Expected 'a', but got %v", string(result.Rest))
 		}
 	})
 }
