@@ -151,7 +151,7 @@ func TestGivenAVerse(t *testing.T) {
 		s, ok := many.Parse(testStr)
 
 		if !ok {
-			t.Errorf("Expected multiple to return ParseSuccess with data %v and rest %v, but got nil", "John", " 3:16")
+			t.Errorf("Expected multiple to return ParseSuccess with data %v and rest %v, but got nil", "John", "' 3:16'")
 		}
 
 		expected := []rune("John")
@@ -163,6 +163,37 @@ func TestGivenAVerse(t *testing.T) {
 
 		if string(s.Rest) != " 3:16" {
 			t.Errorf("Expected multiple to return ParseSuccess with data %v and rest %v, but rest was %v", "John", " 3:16", string(s.Rest))
+		}
+	})
+
+	t.Run("When parsing multiple Alphabetic characters", func(t *testing.T) {
+		many := AtLeastOne(IsAlpha())
+
+		s, ok := many.Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected multiple to return ParseSuccess with data %v and rest %v, but got nil", "John", "' 3:16'")
+		}
+
+		expected := []rune("John")
+		for i, it := range s.Data.([]interface{}) {
+			if expected[i] != it.(rune) {
+				t.Errorf("Expected %v in position %v of word 'John', but was %v", expected[i], i, it)
+			}
+		}
+
+		if string(s.Rest) != " 3:16" {
+			t.Errorf("Expected multiple to return ParseSuccess with data %v and rest %v, but rest was %v", "John", " 3:16", string(s.Rest))
+		}
+	})
+
+	t.Run("When parsing at least one Alphabetic character and the string is digits", func(t *testing.T) {
+		many := AtLeastOne(IsAlpha())
+
+		_, ok := many.Parse([]rune("123"))
+
+		if ok {
+			t.Errorf("Expected alphabetic parser to fail when given digits, but it didn't")
 		}
 	})
 }

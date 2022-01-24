@@ -173,3 +173,20 @@ func (many *Many) Parse(s []rune) (*ParseSuccess, bool) {
 		})
 	}).Or(Success([]interface{}{})).Parse(s)
 }
+
+type Many1 struct {
+	parser *Combinator
+}
+
+func AtLeastOne(parser *Combinator) *Combinator {
+	return &Combinator{&Many1{parser}}
+}
+
+func (many1 *Many1) Parse(s []rune) (*ParseSuccess, bool) {
+	return many1.parser.FlatMap(func(it interface{}) Parser {
+		return Multiple(many1.parser).FlatMap(func(rest interface{}) Parser {
+			// TODO - change this later to something more appropriate
+			return Success(append([]interface{}{it}, rest.([]interface{})...))
+		})
+	}).Parse(s)
+}
