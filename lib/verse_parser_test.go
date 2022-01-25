@@ -214,4 +214,26 @@ func TestGivenAVerse(t *testing.T) {
 			t.Errorf("Expected 'a', but got %v", string(result.Rest))
 		}
 	})
+
+	t.Run("When parsing two numbers separated by a dash", func(t *testing.T) {
+		parser := NaturalNumber().SeparatedBy(Rune('-'))
+
+		result, ok := parser.Parse([]rune("12-25a"))
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.([]interface{})[0].(int) != 12 {
+			t.Errorf("Expected first item to be 12, but got %v", result.Data.([]interface{})[0].(int))
+		}
+
+		if result.Data.([]interface{})[1].(int) != 25 {
+			t.Errorf("Expected second item to be 25, but got %v", result.Data.([]interface{})[1].(int))
+		}
+
+		if string(result.Rest) != "a" {
+			t.Errorf("Expected 'a', but got %v", string(result.Rest))
+		}
+	})
 }

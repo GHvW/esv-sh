@@ -120,6 +120,25 @@ func (pc *Combinator) Parse(s []rune) (*ParseSuccess, bool) {
 	return pc.parser.Parse(s)
 }
 
+type SepBy struct {
+	parser    *Combinator
+	separator *Combinator
+}
+
+func (sep *SepBy) Parse(s []rune) (*ParseSuccess, bool) {
+	return sep.parser.FlatMap(func(first interface{}) Parser {
+		return sep.separator.FlatMap(func(_sep interface{}) Parser {
+			return sep.parser.FlatMap(func(second interface{}) Parser {
+				return Success([]interface{}{first, second})
+			})
+		})
+	}).Parse(s)
+}
+
+func (pc *Combinator) SeparatedBy(other *Combinator) *Combinator {
+	return &Combinator{&SepBy{pc, other}}
+}
+
 type Satisfy struct {
 	predicate func(rune) bool
 }
@@ -208,3 +227,41 @@ func (nat *Natural) Parse(s []rune) (*ParseSuccess, bool) {
 		return result
 	}).Parse(s)
 }
+
+type RuneParser struct {
+	r rune
+}
+
+func Rune(r rune) *Combinator {
+	return &Combinator{RuneParser{r}}
+}
+
+func (rp RuneParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return Satisfies(func(r rune) bool {
+		return r == rp.r
+	}).Parse(s)
+}
+
+type WordParser struct{}
+
+func Word() *Combinator {
+	return &Combinator{WordParser{}}
+}
+
+func (wp WordParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return AtLeastOne(Alpha()).Parse(s)
+}
+
+// Token
+
+// whitespace
+
+// ignore or skip
+
+// type VerseParser struct {
+
+// }
+
+// func (vp *VerseParser) Parse(s []rune) (*ParseSuccess, bool) {
+// 	return
+// }
