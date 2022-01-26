@@ -8,6 +8,7 @@ import (
 	"golang.org/x/text/transform"
 )
 
+// TODO - refactor this and split out tests on strings, digits, spaces, etc.
 func TestGivenAVerse(t *testing.T) {
 	testStr := []rune("John 3:16")
 
@@ -234,6 +235,28 @@ func TestGivenAVerse(t *testing.T) {
 
 		if string(result.Rest) != "a" {
 			t.Errorf("Expected 'a', but got %v", string(result.Rest))
+		}
+	})
+}
+
+func TestWhiteSpace(t *testing.T) {
+	testStr := []rune("\tab")
+
+	t.Run("When parsing a string of whitespace then other characters", func(t *testing.T) {
+		parser := WhiteSpace()
+
+		result, ok := parser.Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if string(result.Data.(rune)) != "\t" {
+			t.Errorf("Expected to parse all whitespace, but did not")
+		}
+
+		if string(result.Rest) != "ab" {
+			t.Errorf("Expected 'ab', but got %v", string(result.Rest))
 		}
 	})
 }

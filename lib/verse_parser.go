@@ -252,9 +252,32 @@ func (wp WordParser) Parse(s []rune) (*ParseSuccess, bool) {
 	return AtLeastOne(Alpha()).Parse(s)
 }
 
-// Token
+type Space struct{}
 
-// whitespace
+func WhiteSpace() *Combinator {
+	return &Combinator{Space{}}
+}
+
+func (space Space) Parse(s []rune) (*ParseSuccess, bool) {
+	return Satisfies(unicode.IsSpace).Parse(s)
+}
+
+// Token
+type TokenParser struct {
+	parser *Combinator
+}
+
+func Token(parser *Combinator) *Combinator {
+	return &Combinator{&TokenParser{parser}}
+}
+
+func (tok *TokenParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return tok.parser.FlatMap(func(token interface{}) Parser {
+		return Multiple(WhiteSpace()).FlatMap(func(_spaces interface{}) Parser {
+			return Success(token)
+		})
+	}).Parse(s)
+}
 
 // ignore or skip
 
