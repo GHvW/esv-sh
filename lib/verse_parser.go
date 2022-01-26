@@ -139,6 +139,23 @@ func (pc *Combinator) SeparatedBy(other *Combinator) *Combinator {
 	return &Combinator{&SepBy{pc, other}}
 }
 
+type AndParser struct {
+	first  *Combinator
+	second *Combinator
+}
+
+func (ap *AndParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return ap.first.FlatMap(func(first interface{}) Parser {
+		return ap.second.FlatMap(func(second interface{}) Parser {
+			return Success(&Pair{first, second})
+		})
+	}).Parse(s)
+}
+
+func (pc *Combinator) And(other *Combinator) *Combinator {
+	return &Combinator{&AndParser{pc, other}}
+}
+
 type Satisfy struct {
 	predicate func(rune) bool
 }
@@ -281,10 +298,12 @@ func (tok *TokenParser) Parse(s []rune) (*ParseSuccess, bool) {
 
 // ignore or skip
 
-// type VerseParser struct {
+type BookParser struct{}
 
-// }
+func Book() *Combinator {
+	return &Combinator{BookParser{}}
+}
 
-// func (vp *VerseParser) Parse(s []rune) (*ParseSuccess, bool) {
-// 	return
-// }
+func (bp BookParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return Token(Digit()).And(Token(Word())).Or(Token(Word())).Parse(s)
+}

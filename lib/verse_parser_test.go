@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"strings"
 	"testing"
 	"unicode"
 
@@ -257,6 +258,79 @@ func TestWhiteSpace(t *testing.T) {
 
 		if string(result.Rest) != "ab" {
 			t.Errorf("Expected 'ab', but got %v", string(result.Rest))
+		}
+	})
+}
+
+func TestAnd(t *testing.T) {
+	testStr := []rune("J3")
+
+	t.Run("When parsing a string for two items using And", func(t *testing.T) {
+		parser := Alpha().And(Digit())
+
+		result, ok := parser.Parse(testStr)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(*Pair).First.(rune) != 'J' {
+			t.Errorf("Expected first item to be 'J', but got %v", result.Data.(*Pair).First.(rune))
+		}
+
+		if result.Data.(*Pair).Second.(rune) != '3' {
+			t.Errorf("Expected second item to be '3', but got %v", result.Data.(*Pair).Second.(rune))
+		}
+	})
+}
+
+func TestParseBook(t *testing.T) {
+	john := []rune("John 1:1")
+	firstJohn := []rune("1 John 1:1")
+
+	parser := Book()
+
+	runeToStr := func(them []interface{}) string {
+		sb := strings.Builder{}
+		for _, it := range them {
+			sb.WriteRune(it.(rune))
+		}
+		return sb.String()
+	}
+
+	t.Run("When parsing a regular book", func(t *testing.T) {
+		result, ok := parser.Parse(john)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if runeToStr(result.Data.([]interface{})) != "John" {
+			t.Errorf("Expected 'John', but got %v", result.Data)
+		}
+
+		if string(result.Rest) != "1:1" {
+			t.Errorf("Expected ' 1:1', but got %v", string(result.Rest))
+		}
+	})
+
+	t.Run("When parsing a book that starts with a digit", func(t *testing.T) {
+		result, ok := parser.Parse(firstJohn)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(*Pair).First.(rune) != '1' {
+			t.Errorf("Expected '1', but got %v", result.Data.(*Pair).First.(string))
+		}
+
+		if runeToStr(result.Data.(*Pair).Second.([]interface{})) != "John" {
+			t.Errorf("Expected '1', but got %v", result.Data.(*Pair).Second)
+		}
+
+		if string(result.Rest) != "1:1" {
+			t.Errorf("Expected1:1', but got %v", string(result.Rest))
 		}
 	})
 }
