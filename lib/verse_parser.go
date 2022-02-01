@@ -297,6 +297,12 @@ func (tok *TokenParser) Parse(s []rune) (*ParseSuccess, bool) {
 }
 
 // ignore or skip
+// func MultiBookMatch(book string) *Combinator {
+// 	books := map[string]int{
+// 		"John":        1,
+// 		"Corinthians": 1,
+// 	}
+// }
 
 type BookParser struct{}
 
@@ -305,5 +311,11 @@ func Book() *Combinator {
 }
 
 func (bp BookParser) Parse(s []rune) (*ParseSuccess, bool) {
-	return Token(Digit()).And(Token(Word())).Or(Token(Word())).Parse(s)
+	return Token(Rune('1').Or(Rune('2')).FlatMap(func(n interface{}) Parser {
+		return WhiteSpace().FlatMap(func(_space interface{}) Parser {
+			return Word().FlatMap(func(word interface{}) Parser {
+				return Success(append([]interface{}{n, ' '}, word.([]interface{})...))
+			})
+		})
+	})).Or(Token(Word())).Parse(s)
 }

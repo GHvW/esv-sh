@@ -321,12 +321,8 @@ func TestParseBook(t *testing.T) {
 			t.Errorf("Expected success")
 		}
 
-		if result.Data.(*Pair).First.(rune) != '1' {
-			t.Errorf("Expected '1', but got %v", result.Data.(*Pair).First.(string))
-		}
-
-		if runeToStr(result.Data.(*Pair).Second.([]interface{})) != "John" {
-			t.Errorf("Expected '1', but got %v", result.Data.(*Pair).Second)
+		if runeToStr(result.Data.([]interface{})) != "1 John" {
+			t.Errorf("Expected '1 John', but got %v", result.Data)
 		}
 
 		if string(result.Rest) != "1:1" {
