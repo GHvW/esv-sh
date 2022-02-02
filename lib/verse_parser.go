@@ -328,9 +328,9 @@ func (vrp VerseRangeParser) Parse(s []rune) (*ParseSuccess, bool) {
 	})).Map(func(ns interface{}) interface{} {
 		numbers := ns.([]interface{})
 		return Verses{numbers[0].(int), numbers[1].(int) - numbers[0].(int) + 1}
-	}).Or(Token(NaturalNumber())).Map(func(n interface{}) interface{} {
+	}).Or(Token(NaturalNumber()).Map(func(n interface{}) interface{} {
 		return Verses{n.(int), 0}
-	}).Parse(s)
+	})).Parse(s)
 }
 
 // type ChapterAndVerseParser struct {}

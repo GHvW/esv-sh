@@ -349,12 +349,12 @@ func TestVerseRange(t *testing.T) {
 			t.Errorf("Expected Verse # to be 16, but got %v", result.Data.(Verses).VerseNumber)
 		}
 
-		if result.Data.(Verses).Count != 4 {
-			t.Errorf("Expected Verse Count to be 16, but got %v", result.Data.(Verses).Count)
+		if result.Data.(Verses).Count != 5 {
+			t.Errorf("Expected Verse Count to be 5, but got %v", result.Data.(Verses).Count)
 		}
 
-		if string(result.Rest) != " a" {
-			t.Errorf("Expected ' a', but got %v", string(result.Rest))
+		if string(result.Rest) != "a" {
+			t.Errorf("Expected 'a', but got %v", string(result.Rest))
 		}
 	})
 
