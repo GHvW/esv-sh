@@ -296,14 +296,6 @@ func (tok *TokenParser) Parse(s []rune) (*ParseSuccess, bool) {
 	}).Parse(s)
 }
 
-// ignore or skip
-// func MultiBookMatch(book string) *Combinator {
-// 	books := map[string]int{
-// 		"John":        1,
-// 		"Corinthians": 1,
-// 	}
-// }
-
 type BookParser struct{}
 
 func Book() *Combinator {
@@ -319,3 +311,40 @@ func (bp BookParser) Parse(s []rune) (*ParseSuccess, bool) {
 		})
 	})).Or(Token(Word())).Parse(s)
 }
+
+type VerseRangeParser struct{}
+
+func VerseRange() *Combinator {
+	return &Combinator{VerseRangeParser{}}
+}
+
+func (vrp VerseRangeParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return Token(NaturalNumber().FlatMap(func(verse interface{}) Parser {
+		return Token(Rune('-')).FlatMap(func(_dash interface{}) Parser {
+			return NaturalNumber().FlatMap(func(to interface{}) Parser {
+				return Success([]interface{}{verse, to})
+			})
+		})
+	})).Map(func(ns interface{}) interface{} {
+		numbers := ns.([]interface{})
+		return Verses{numbers[0].(int), numbers[1].(int) - numbers[0].(int) + 1}
+	}).Or(Token(NaturalNumber())).Map(func(n interface{}) interface{} {
+		return Verses{n.(int), 0}
+	}).Parse(s)
+}
+
+// type ChapterAndVerseParser struct {}
+
+// func ChapterAndVerse() *Combinator {
+// 	return &Combinator{ChapterAndVerseParser{}}
+// }
+
+// func (vrp ChapterAndVerseParser) Parse(s []rune) (*ParseSuccess, bool) {
+// 	return Token(NaturalNumber().FlatMap(func(chapter interface{}) Parser {
+// 		return Token(Rune(':')).FlatMap(func(_colon interface{}) Parser {
+// 			return NaturalNumber().FlatMap(func(verse interface{}) Parser {
+// 				return Success(append([]interface{}{start, '-', end}))
+// 			})
+// 		})
+// 	})).Parse(s)
+// }

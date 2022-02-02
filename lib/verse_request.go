@@ -11,7 +11,7 @@ type VerseRequest struct {
 	Count int
 }
 
-type VerseRange struct {
+type Verses struct {
 	VerseNumber int
 	Count       int
 }

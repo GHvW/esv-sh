@@ -330,3 +330,48 @@ func TestParseBook(t *testing.T) {
 		}
 	})
 }
+
+func TestVerseRange(t *testing.T) {
+	f := []rune("16-20 a")
+	s := []rune("16 a")
+
+	vp := VerseRange()
+
+	t.Run("When parsing a verse range", func(t *testing.T) {
+
+		result, ok := vp.Parse(f)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(Verses).VerseNumber != 16 {
+			t.Errorf("Expected Verse # to be 16, but got %v", result.Data.(Verses).VerseNumber)
+		}
+
+		if result.Data.(Verses).Count != 4 {
+			t.Errorf("Expected Verse Count to be 16, but got %v", result.Data.(Verses).Count)
+		}
+
+		if string(result.Rest) != " a" {
+			t.Errorf("Expected ' a', but got %v", string(result.Rest))
+		}
+	})
+
+	t.Run("When parsing a verse", func(t *testing.T) {
+
+		result, ok := vp.Parse(s)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(Verses).VerseNumber != 16 {
+			t.Errorf("Expected Verse # to be 3, but got %v", result.Data)
+		}
+
+		if string(result.Rest) != "a" {
+			t.Errorf("Expected 'a', but got %v", string(result.Rest))
+		}
+	})
+}
