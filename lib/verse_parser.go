@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"strings"
 	"unicode"
 )
 
@@ -351,18 +352,26 @@ func (vrp VerseRangeParser) Parse(s []rune) (*ParseSuccess, bool) {
 	})).Parse(s)
 }
 
-// type ChapterAndVerseParser struct {}
+type VerseRequestParser struct{}
 
-// func ChapterAndVerse() *Combinator {
-// 	return &Combinator{ChapterAndVerseParser{}}
-// }
+func VerseReq() *Combinator {
+	return &Combinator{VerseRequestParser{}}
+}
 
-// func (vrp ChapterAndVerseParser) Parse(s []rune) (*ParseSuccess, bool) {
-// 	return Token(NaturalNumber().FlatMap(func(chapter interface{}) Parser {
-// 		return Token(Rune(':')).FlatMap(func(_colon interface{}) Parser {
-// 			return NaturalNumber().FlatMap(func(verse interface{}) Parser {
-// 				return Success(append([]interface{}{start, '-', end}))
-// 			})
-// 		})
-// 	})).Parse(s)
-// }
+func runeToStr(them []interface{}) string {
+	sb := strings.Builder{}
+	for _, it := range them {
+		sb.WriteRune(it.(rune))
+	}
+	return sb.String()
+}
+
+func (vrp VerseRequestParser) Parse(s []rune) (*ParseSuccess, bool) {
+	return Token(Book()).And(Token(NaturalNumber()).IgnoreNext(Rune(':')).And(VerseRange())).Map(func(data interface{}) interface{} {
+		book := runeToStr(data.(*Pair).First.([]interface{}))
+		chapterAndVerseRange := data.(*Pair).Second.(*Pair)
+		chapter := chapterAndVerseRange.First.(int)
+		verseRange := chapterAndVerseRange.Second.(Verses)
+		return &VerseRequest{Verse{book, chapter, verseRange.VerseNumber}, verseRange.Count}
+	}).Parse(s)
+}

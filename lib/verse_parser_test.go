@@ -381,7 +381,7 @@ func TestIgnore(t *testing.T) {
 
 	a := Rune('a').IgnoreNext(Rune(':'))
 
-	t.Run("When parsing a verse range", func(t *testing.T) {
+	t.Run("When parsing followed by an ignore", func(t *testing.T) {
 
 		result, ok := a.Parse(str)
 
@@ -390,11 +390,68 @@ func TestIgnore(t *testing.T) {
 		}
 
 		if result.Data.(rune) != 'a' {
-			t.Errorf("Expected Verse # to be 16, but got %v", result.Data.(Verses).VerseNumber)
+			t.Errorf("Expected 'a', but got %v", result.Data.(Verses).VerseNumber)
 		}
 
 		if string(result.Rest) != "b" {
 			t.Errorf("Expected 'b', but got %v", string(result.Rest))
+		}
+	})
+}
+
+func TestVerseRequestParse(t *testing.T) {
+	s1 := []rune("1 John 1:1-3")
+	s2 := []rune("John 3:16")
+
+	a := VerseReq()
+
+	t.Run("When parsing a verse starting with a number that includes a range", func(t *testing.T) {
+
+		result, ok := a.Parse(s1)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(*VerseRequest).Verse.Book != "1 John" {
+			t.Errorf("Expected '1 John', but got %v", result.Data)
+		}
+
+		if result.Data.(*VerseRequest).Verse.Chapter != 1 {
+			t.Errorf("Expected '1', but got %v", result.Data)
+		}
+
+		if result.Data.(*VerseRequest).Verse.Verse != 1 {
+			t.Errorf("Expected '1', but got %v", result.Data)
+		}
+
+		if result.Data.(*VerseRequest).Count != 3 {
+			t.Errorf("Expected '3', but got %v", result.Data)
+		}
+	})
+
+	t.Run("When parsing a regular verse with no range", func(t *testing.T) {
+
+		result, ok := a.Parse(s2)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(*VerseRequest).Verse.Book != "John" {
+			t.Errorf("Expected 'John', but got %v", result.Data)
+		}
+
+		if result.Data.(*VerseRequest).Verse.Chapter != 3 {
+			t.Errorf("Expected '3', but got %v", result.Data)
+		}
+
+		if result.Data.(*VerseRequest).Verse.Verse != 16 {
+			t.Errorf("Expected '16', but got %v", result.Data)
+		}
+
+		if result.Data.(*VerseRequest).Count != 0 {
+			t.Errorf("Expected '0', but got %v", result.Data)
 		}
 	})
 }
