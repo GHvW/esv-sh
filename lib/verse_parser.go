@@ -120,6 +120,7 @@ func (pc *Combinator) Parse(s []rune) (*ParseSuccess, bool) {
 	return pc.parser.Parse(s)
 }
 
+// Remove or make it like a normal SepBy
 type SepBy struct {
 	parser    *Combinator
 	separator *Combinator
@@ -137,6 +138,23 @@ func (sep *SepBy) Parse(s []rune) (*ParseSuccess, bool) {
 
 func (pc *Combinator) SeparatedBy(other *Combinator) *Combinator {
 	return &Combinator{&SepBy{pc, other}}
+}
+
+type Ignore struct {
+	parser   *Combinator
+	ignoring *Combinator
+}
+
+func (i *Ignore) Parse(s []rune) (*ParseSuccess, bool) {
+	return i.parser.FlatMap(func(it interface{}) Parser {
+		return i.ignoring.FlatMap(func(_ignored interface{}) Parser {
+			return Success(it)
+		})
+	}).Parse(s)
+}
+
+func (pc *Combinator) IgnoreNext(ignoring *Combinator) *Combinator {
+	return &Combinator{&Ignore{pc, ignoring}}
 }
 
 type AndParser struct {

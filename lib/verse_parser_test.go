@@ -375,3 +375,26 @@ func TestVerseRange(t *testing.T) {
 		}
 	})
 }
+
+func TestIgnore(t *testing.T) {
+	str := []rune("a:b")
+
+	a := Rune('a').IgnoreNext(Rune(':'))
+
+	t.Run("When parsing a verse range", func(t *testing.T) {
+
+		result, ok := a.Parse(str)
+
+		if !ok {
+			t.Errorf("Expected success")
+		}
+
+		if result.Data.(rune) != 'a' {
+			t.Errorf("Expected Verse # to be 16, but got %v", result.Data.(Verses).VerseNumber)
+		}
+
+		if string(result.Rest) != "b" {
+			t.Errorf("Expected 'b', but got %v", string(result.Rest))
+		}
+	})
+}
