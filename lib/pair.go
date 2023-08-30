@@ -1,6 +1,6 @@
 package lib
 
-type Pair struct {
-	First  interface{}
-	Second interface{}
+type Pair[A, B any] struct {
+	First  A
+	Second B
 }

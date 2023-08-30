@@ -7,80 +7,64 @@ import (
 
 // completely overkill, but so so fun
 
-type ParseSuccess struct {
-	Data interface{}
+type ParseSuccess[A any] struct {
+	Data A
 	Rest []rune
 }
 
 // Parser is a function that takes a string and returns a value and a bool
-type Parser interface {
+type Parser[A any] interface {
 	// []rune is the input string
-	Parse([]rune) (*ParseSuccess, bool)
-}
-
-// func satsify(predicate func(string) bool) bool {
-// 	if predicate(c) {
-// }
-type Item struct{}
-
-func TakeItem() *Combinator {
-	return &Combinator{Item{}}
-}
-
-func (item Item) Parse(s []rune) (*ParseSuccess, bool) {
-	if len(s) == 0 {
-		return nil, false
-	}
-	return &ParseSuccess{s[0], s[1:]}, true
+	Parse([]rune) (*ParseSuccess[A], bool)
 }
 
 // Zero is a parser that always fails
-type Zero struct{}
+type Zero[A any] struct{}
 
-func Fail() *Combinator {
-	return &Combinator{Zero{}}
-}
-
-func (z Zero) Parse(s []rune) (*ParseSuccess, bool) {
+func (z Zero[A]) Parse(s []rune) (*ParseSuccess[A], bool) {
 	return nil, false
 }
 
+func Fail[A any]() *Zero[A] {
+	return &Zero[A]{}
+}
+
 // Succeed is a parser that always succeeds and returns the given value.
-type Succeed struct {
-	item interface{}
+type Succeed[A any] struct {
+	item A
 }
 
-func Success(item interface{}) *Combinator {
-	return &Combinator{&Succeed{item}}
+func Success[A any](item A) *Succeed[A] {
+	return &Succeed[A]{item}
 }
 
-func (su *Succeed) Parse(s []rune) (*ParseSuccess, bool) {
-	return &ParseSuccess{su.item, s}, true
+func (su *Succeed[A]) Parse(s []rune) (*ParseSuccess[A], bool) {
+	return &ParseSuccess[A]{su.item, s}, true
 }
 
 // Map is a Parser that applies a function to the result of another Parser
-type Map struct {
+type Map[A, B any] struct {
 	// a -> b
-	fn     func(interface{}) interface{}
-	parser Parser
+	fn     func(A) B
+	parser Parser[A]
 }
 
-func (m *Map) Parse(s []rune) (*ParseSuccess, bool) {
+func (m *Map[A, B]) Parse(s []rune) (*ParseSuccess[B], bool) {
 	result, ok := m.parser.Parse(s)
 	if !ok {
 		return nil, false
 	}
-	return &ParseSuccess{m.fn(result.Data), result.Rest}, true
+	return &ParseSuccess[B]{m.fn(result.Data), result.Rest}, true
 }
 
 // FlatMap is a Parser that applies a function that returns a Parser to the result of a Parser
-type FlatMap struct {
+type FlatMap[A, B any] struct {
 	// a -> Parser[b]
-	fn     func(interface{}) Parser
-	parser Parser
+	fn     func(A) Parser[B]
+	parser Parser[A]
 }
 
-func (fm *FlatMap) Parse(s []rune) (*ParseSuccess, bool) {
+func (fm *FlatMap[A, B]) Parse(s []rune) (*ParseSuccess[B], bool) {
 	item, ok := fm.parser.Parse(s)
 	if !ok {
 		return nil, false
@@ -88,12 +72,12 @@ func (fm *FlatMap) Parse(s []rune) (*ParseSuccess, bool) {
 	return fm.fn(item.Data).Parse(item.Rest)
 }
 
-type Or struct {
-	first  Parser
-	second Parser
+type Or[A any] struct {
+	first  Parser[A]
+	second Parser[A]
 }
 
-func (or *Or) Parse(s []rune) (*ParseSuccess, bool) {
+func (or *Or[A]) Parse(s []rune) (*ParseSuccess[A], bool) {
 	item, ok := or.first.Parse(s)
 	if ok {
 		return item, true
@@ -101,116 +85,55 @@ func (or *Or) Parse(s []rune) (*ParseSuccess, bool) {
 	return or.second.Parse(s)
 }
 
-type Combinator struct {
-	parser Parser
+type And[A, B any] struct {
+	first  *Parser[A]
+	second *Parser[B]
 }
 
-func (pc *Combinator) Map(fn func(interface{}) interface{}) *Combinator {
-	return &Combinator{&Map{fn, pc.parser}}
-}
+func (a *And[A, B]) Parse(s []rune) (*ParseSuccess[Pair[A, B]], bool) {
+	item1, ok1 := a.first.Parse(s)
 
-func (pc *Combinator) FlatMap(fn func(interface{}) Parser) *Combinator {
-	return &Combinator{&FlatMap{fn, pc.parser}}
-}
-
-func (pc *Combinator) Or(other Parser) *Combinator {
-	return &Combinator{&Or{pc.parser, other}}
-}
-
-func (pc *Combinator) Parse(s []rune) (*ParseSuccess, bool) {
-	return pc.parser.Parse(s)
-}
-
-// Remove or make it like a normal SepBy
-type SepBy struct {
-	parser    *Combinator
-	separator *Combinator
-}
-
-func (sep *SepBy) Parse(s []rune) (*ParseSuccess, bool) {
-	return sep.parser.FlatMap(func(first interface{}) Parser {
-		return sep.separator.FlatMap(func(_sep interface{}) Parser {
-			return sep.parser.FlatMap(func(second interface{}) Parser {
-				return Success([]interface{}{first, second})
-			})
-		})
-	}).Parse(s)
-}
-
-func (pc *Combinator) SeparatedBy(other *Combinator) *Combinator {
-	return &Combinator{&SepBy{pc, other}}
-}
-
-type Ignore struct {
-	parser   *Combinator
-	ignoring *Combinator
-}
-
-func (i *Ignore) Parse(s []rune) (*ParseSuccess, bool) {
-	return i.parser.FlatMap(func(it interface{}) Parser {
-		return i.ignoring.FlatMap(func(_ignored interface{}) Parser {
-			return Success(it)
-		})
-	}).Parse(s)
-}
-
-func (pc *Combinator) IgnoreNext(ignoring *Combinator) *Combinator {
-	return &Combinator{&Ignore{pc, ignoring}}
-}
-
-type AndParser struct {
-	first  *Combinator
-	second *Combinator
-}
-
-func (ap *AndParser) Parse(s []rune) (*ParseSuccess, bool) {
-	return ap.first.FlatMap(func(first interface{}) Parser {
-		return ap.second.FlatMap(func(second interface{}) Parser {
-			return Success(&Pair{first, second})
-		})
-	}).Parse(s)
-}
-
-func (pc *Combinator) And(other *Combinator) *Combinator {
-	return &Combinator{&AndParser{pc, other}}
 }
 
 type Satisfy struct {
 	predicate func(rune) bool
 }
 
-func Satisfies(predicate func(rune) bool) *Combinator {
-	return &Combinator{&Satisfy{predicate}}
+func Satisfies(predicate func(rune) bool) *Parser[rune] {
+	return &Satisfy{predicate}
 }
 
-func (sat *Satisfy) Parse(s []rune) (*ParseSuccess, bool) {
-	return TakeItem().FlatMap(func(it interface{}) Parser {
-		if sat.predicate(it.(rune)) {
-			return Success(it)
-		}
-		return Fail()
-	}).Parse(s)
+func (sat *Satisfy) Parse(s []rune) (*ParseSuccess[rune], bool) {
+	if len(s) == 0 {
+		return nil, false
+	}
+
+	data := s[0]
+	if sat.predicate(data) {
+		return &ParseSuccess[rune]{data, s[1:]}, true
+	}
+	return nil, false
 }
 
 // Alpha is a parser that matches any single character in the range a-z
 type AlphaParser struct{}
 
-func Alpha() *Combinator {
-	return &Combinator{AlphaParser{}}
+func Alpha() *AlphaParser {
+	return &AlphaParser{}
 }
 
-func (a AlphaParser) Parse(s []rune) (*ParseSuccess, bool) {
+func (a AlphaParser) Parse(s []rune) (*ParseSuccess[rune], bool) {
 	return Satisfies(unicode.IsLetter).Parse(s)
 }
 
 // Digit matches a string that is a digit character
 type DigitParser struct{}
 
-func Digit() *Combinator {
-	return &Combinator{DigitParser{}}
+func Digit() *DigitParser {
+	return &DigitParser{}
 }
 
-func (d DigitParser) Parse(s []rune) (*ParseSuccess, bool) {
+func (d DigitParser) Parse(s []rune) (*ParseSuccess[rune], bool) {
 	return Satisfies(unicode.IsDigit).Parse(s)
 }
 
