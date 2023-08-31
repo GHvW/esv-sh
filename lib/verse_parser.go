@@ -86,20 +86,29 @@ func (or *Or[A]) Parse(s []rune) (*ParseSuccess[A], bool) {
 }
 
 type And[A, B any] struct {
-	first  *Parser[A]
-	second *Parser[B]
+	first  Parser[A]
+	second Parser[B]
 }
 
 func (a *And[A, B]) Parse(s []rune) (*ParseSuccess[Pair[A, B]], bool) {
 	item1, ok1 := a.first.Parse(s)
+	if !ok1 {
+		return nil, false
+	}
 
+	item2, ok2 := a.second.Parse(item1.Rest)
+	if !ok2 {
+		return nil, false
+	}
+
+	return &ParseSuccess[Pair[A, B]]{Pair[A, B]{item1.Data, item2.Data}, item2.Rest}, true
 }
 
 type Satisfy struct {
 	predicate func(rune) bool
 }
 
-func Satisfies(predicate func(rune) bool) *Parser[rune] {
+func Satisfies(predicate func(rune) bool) *Satisfy {
 	return &Satisfy{predicate}
 }
 
@@ -137,21 +146,25 @@ func (d DigitParser) Parse(s []rune) (*ParseSuccess[rune], bool) {
 	return Satisfies(unicode.IsDigit).Parse(s)
 }
 
-type Many struct {
-	parser *Combinator
+type Many[A any] struct {
+	parser Parser[A]
 }
 
-func Multiple(parser *Combinator) *Combinator {
-	return &Combinator{&Many{parser}}
+func Multiple[A any](parser Parser[A]) *Many[A] {
+	return &Many[A]{parser}
 }
 
-func (many *Many) Parse(s []rune) (*ParseSuccess, bool) {
-	return many.parser.FlatMap(func(it interface{}) Parser {
-		return Multiple(many.parser).FlatMap(func(rest interface{}) Parser {
-			// TODO - change this later to something more appropriate
-			return Success(append([]interface{}{it}, rest.([]interface{})...))
-		})
-	}).Or(Success([]interface{}{})).Parse(s)
+func (many *Many[A]) Parse(s []rune) (*ParseSuccess[[]A], bool) {
+	result := []A{}
+	rest := s
+	parsed, ok := many.parser.Parse(rest)
+	for ok {
+		result = append(result, parsed.Data)
+		rest = parsed.Rest
+		parsed, ok = many.parser.Parse(rest)
+	}
+
+	return &ParseSuccess[[]A]{result, rest}, false
 }
 
 type Many1 struct {
@@ -173,29 +186,29 @@ func (many1 *Many1) Parse(s []rune) (*ParseSuccess, bool) {
 
 type Natural struct{}
 
-func NaturalNumber() *Combinator {
-	return &Combinator{&Natural{}}
+func NaturalNumber() *Natural {
+	return &Natural{}
 }
 
-func (nat *Natural) Parse(s []rune) (*ParseSuccess, bool) {
-	return AtLeastOne(Digit()).Map(func(it interface{}) interface{} {
-		result := 0
-		for _, next := range it.([]interface{}) {
-			result = (10 * result) + int(next.(rune)-'0')
-		}
-		return result
-	}).Parse(s)
+func (nat *Natural) Parse(s []rune) (*ParseSuccess[int], bool) {
+	// return AtLeastOne(Digit()).Map(func(it interface{}) interface{} {
+	// 	result := 0
+	// 	for _, next := range it.([]interface{}) {
+	// 		result = (10 * result) + int(next.(rune)-'0')
+	// 	}
+	// 	return result
+	// }).Parse(s)
 }
 
 type RuneParser struct {
 	r rune
 }
 
-func Rune(r rune) *Combinator {
-	return &Combinator{RuneParser{r}}
+func Rune(r rune) RuneParser {
+	return RuneParser{r}
 }
 
-func (rp RuneParser) Parse(s []rune) (*ParseSuccess, bool) {
+func (rp RuneParser) Parse(s []rune) (*ParseSuccess[rune], bool) {
 	return Satisfies(func(r rune) bool {
 		return r == rp.r
 	}).Parse(s)
@@ -203,82 +216,39 @@ func (rp RuneParser) Parse(s []rune) (*ParseSuccess, bool) {
 
 type WordParser struct{}
 
-func Word() *Combinator {
-	return &Combinator{WordParser{}}
+func Word() WordParser {
+	return WordParser{}
 }
 
-func (wp WordParser) Parse(s []rune) (*ParseSuccess, bool) {
+func (wp WordParser) Parse(s []rune) (*ParseSuccess[[]rune], bool) {
 	return AtLeastOne(Alpha()).Parse(s)
 }
 
 type Space struct{}
 
-func WhiteSpace() *Combinator {
-	return &Combinator{Space{}}
+func WhiteSpace() Space {
+	return Space{}
 }
 
-func (space Space) Parse(s []rune) (*ParseSuccess, bool) {
+func (space Space) Parse(s []rune) (*ParseSuccess[rune], bool) {
 	return Satisfies(unicode.IsSpace).Parse(s)
 }
 
 // Token
-type TokenParser struct {
-	parser *Combinator
+type TokenParser[A any] struct {
+	parser Parser[A]
 }
 
-func Token(parser *Combinator) *Combinator {
-	return &Combinator{&TokenParser{parser}}
+func Token[A any](parser Parser[A]) *TokenParser[A] {
+	return &TokenParser[A]{parser}
 }
 
-func (tok *TokenParser) Parse(s []rune) (*ParseSuccess, bool) {
-	return tok.parser.FlatMap(func(token interface{}) Parser {
-		return Multiple(WhiteSpace()).FlatMap(func(_spaces interface{}) Parser {
-			return Success(token)
-		})
-	}).Parse(s)
-}
-
-type BookParser struct{}
-
-func Book() *Combinator {
-	return &Combinator{BookParser{}}
-}
-
-func (bp BookParser) Parse(s []rune) (*ParseSuccess, bool) {
-	return Token(Rune('1').Or(Rune('2')).FlatMap(func(n interface{}) Parser {
-		return WhiteSpace().FlatMap(func(_space interface{}) Parser {
-			return Word().FlatMap(func(word interface{}) Parser {
-				return Success(append([]interface{}{n, ' '}, word.([]interface{})...))
-			})
-		})
-	})).Or(Token(Word())).Parse(s)
-}
-
-type VerseRangeParser struct{}
-
-func VerseRange() *Combinator {
-	return &Combinator{VerseRangeParser{}}
-}
-
-func (vrp VerseRangeParser) Parse(s []rune) (*ParseSuccess, bool) {
-	return Token(NaturalNumber().FlatMap(func(verse interface{}) Parser {
-		return Token(Rune('-')).FlatMap(func(_dash interface{}) Parser {
-			return NaturalNumber().FlatMap(func(to interface{}) Parser {
-				return Success([]interface{}{verse, to})
-			})
-		})
-	})).Map(func(ns interface{}) interface{} {
-		numbers := ns.([]interface{})
-		return Verses{numbers[0].(int), numbers[1].(int) - numbers[0].(int) + 1}
-	}).Or(Token(NaturalNumber()).Map(func(n interface{}) interface{} {
-		return Verses{n.(int), 0}
-	})).Parse(s)
-}
-
-type VerseRequestParser struct{}
-
-func VerseReq() *Combinator {
-	return &Combinator{VerseRequestParser{}}
+func (tok *TokenParser[A]) Parse(s []rune) (*ParseSuccess[A], bool) {
+	// return tok.parser.FlatMap(func(token interface{}) Parser[A] {
+	// 	return Multiple(WhiteSpace()).FlatMap(func(_spaces interface{}) Parser {
+	// 		return Success(token)
+	// 	})
+	// }).Parse(s)
 }
 
 func runeToStr(them []interface{}) string {
@@ -287,14 +257,4 @@ func runeToStr(them []interface{}) string {
 		sb.WriteRune(it.(rune))
 	}
 	return sb.String()
-}
-
-func (vrp VerseRequestParser) Parse(s []rune) (*ParseSuccess, bool) {
-	return Token(Book()).And(Token(NaturalNumber()).IgnoreNext(Rune(':')).And(VerseRange())).Map(func(data interface{}) interface{} {
-		book := runeToStr(data.(*Pair).First.([]interface{}))
-		chapterAndVerseRange := data.(*Pair).Second.(*Pair)
-		chapter := chapterAndVerseRange.First.(int)
-		verseRange := chapterAndVerseRange.Second.(Verses)
-		return &VerseRequest{Verse{book, chapter, verseRange.VerseNumber}, verseRange.Count}
-	}).Parse(s)
 }
